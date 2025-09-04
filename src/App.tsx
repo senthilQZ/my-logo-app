@@ -17,11 +17,9 @@ export default function App() {
   const [bestScore, setBestScore] = useState(0);
   const [attempts, setAttempts] = useState(0);
 
-  // throttle for smoother lines
   const lastAddRef = useRef<number>(0);
   const ADD_POINT_EVERY_MS = 10;
 
-  // ---------- scoring ----------
   const evaluateLogo = (pts: Point[]): EvaluationResult => {
     if (pts.length < 15) return { score: 0, message: 'Draw the complete logo!' };
     const canvas = canvasRef.current;
@@ -118,11 +116,10 @@ export default function App() {
     else if (totalScore >= 55) message = 'Good job! Nice logo elements! 💪';
     else if (totalScore >= 40) message = 'Not bad! Keep practicing! 🖊️';
     else if (totalScore >= 25) message = 'Getting there! Try the ring + arrow! 🔄';
-
     return { score: totalScore, message };
   };
 
-  // ---------- canvas sizing (mobile-safe, no skew) ----------
+  // Canvas sizing (no skew; mobile-safe)
   useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -135,15 +132,11 @@ export default function App() {
         const { width, height } = entry.contentRect;
         const dpr = window.devicePixelRatio || 1;
 
-        // Match CSS size
         canvas.style.width = `${width}px`;
         canvas.style.height = `${height}px`;
-
-        // Set buffer size
         canvas.width = Math.max(1, Math.floor(width * dpr));
         canvas.height = Math.max(1, Math.floor(height * dpr));
 
-        // Reset then scale — prevents compounding/skew
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.scale(dpr, dpr);
 
@@ -156,7 +149,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---------- preload SVG ----------
+  // Preload SVG
   useEffect(() => {
     const img = new Image();
     img.src = QualiZealLogo;
@@ -164,7 +157,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---------- keyboard shortcuts ----------
+  // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
@@ -176,7 +169,9 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // ---------- draw routine ----------
+  // Redraw on state changes
+  useEffect(() => { drawCanvas(); /* eslint-disable-next-line */ }, [points, showGrid, result]);
+
   const drawCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -187,12 +182,10 @@ export default function App() {
     const width = canvas.width / dpr;
     const height = canvas.height / dpr;
 
-    // clear
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, width, height);
 
-    // grid + guide image
     if (showGrid) {
       ctx.strokeStyle = '#f0f0f0';
       ctx.lineWidth = 1;
@@ -223,7 +216,6 @@ export default function App() {
       }
     }
 
-    // user stroke
     if (points.length > 1) {
       ctx.strokeStyle = '#111827';
       ctx.lineWidth = 4;
@@ -235,7 +227,6 @@ export default function App() {
       ctx.stroke();
     }
 
-    // result overlay
     if (result) {
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
       ctx.fillRect(0, 0, width, height);
@@ -251,25 +242,18 @@ export default function App() {
     }
   };
 
-  // ---------- pointer helpers ----------
   const getMousePos = (e: React.MouseEvent): Point | null => {
     const canvas = canvasRef.current; if (!canvas) return null;
-    const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
   };
   const getTouchPos = (e: React.TouchEvent): Point | null => {
     const canvas = canvasRef.current; if (!canvas || e.touches.length === 0) return null;
-    const rect = canvas.getBoundingClientRect();
-    return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+    const r = canvas.getBoundingClientRect();
+    return { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top };
   };
 
-  // ---------- handlers ----------
-  const startDrawing = (pos: Point | null) => {
-    if (!pos) return;
-    setIsDrawing(true);
-    setResult(null);
-    setPoints([pos]);
-  };
+  const startDrawing = (pos: Point | null) => { if (!pos) return; setIsDrawing(true); setResult(null); setPoints([pos]); };
   const draw = (pos: Point | null) => {
     if (!pos || !isDrawing || result) return;
     const now = performance.now();
@@ -285,6 +269,7 @@ export default function App() {
     setAttempts(a => a + 1);
     if (r.score > bestScore) setBestScore(r.score);
   };
+
   const clearCanvas = () => { setPoints([]); setResult(null); };
   const resetAll = () => {
     setPoints([]);
@@ -295,7 +280,6 @@ export default function App() {
     setIsDrawing(false);
   };
 
-  // ---------- render ----------
   return (
     <div ref={containerRef} className="qz-app">
       <canvas
@@ -309,7 +293,6 @@ export default function App() {
         onTouchEnd={(e) => { e.preventDefault(); stopDrawing(); }}
       />
 
-      {/* Controls */}
       <div className="qz-controls">
         <button className="qz-btn" onClick={clearCanvas} title="Clear your current drawing but keep scores">Clear</button>
         <button className="qz-btn qz-btn--primary" onClick={resetAll} title="Reset everything (scores & attempts)">Reset</button>
@@ -318,7 +301,6 @@ export default function App() {
         </button>
       </div>
 
-      {/* Intro card */}
       {points.length === 0 && !result && (
         <div className="qz-intro">
           <h1>Draw the perfect logo</h1>
@@ -328,7 +310,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Try again CTA */}
       {result && (
         <div className="qz-cta">
           <button className="qz-btn qz-btn--primary" onClick={clearCanvas}>Try again</button>

@@ -1,42 +1,38 @@
 /* ===== Base & Resets ===== */
 *,
 *::before,
-*::after {
-  box-sizing: border-box;
-}
+*::after { box-sizing: border-box; }
 
-html, body, #root {
-  height: 100%;
-}
+html, body, #root { height: 100%; }
 
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
-  color: #111827; /* gray-900 */
+  color: #111827;
   background: #ffffff;
 }
 
-/* ===== App Container ===== */
+/* Use dynamic viewport units to avoid mobile URL bar issues */
 .qz-app {
   position: relative;
   width: 100vw;
-  height: 100dvh; /* mobile-safe vh */
-  min-height: 100vh; /* fallback */
+  height: 100dvh;
+  min-height: 100vh;
   overflow: hidden;
   background: #ffffff;
 }
 
-/* Canvas */
+/* Canvas sits under overlays but above page bg */
 .qz-app > canvas {
   position: absolute;
   inset: 0;
   display: block;
   z-index: 1;
-  touch-action: none; /* smooth touch drawing */
+  touch-action: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ===== Controls ===== */
+/* Controls */
 .qz-controls {
   position: fixed;
   top: 12px;
@@ -45,7 +41,6 @@ body {
   display: flex;
   gap: 8px;
   align-items: center;
-
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: saturate(1.2) blur(4px);
   -webkit-backdrop-filter: saturate(1.2) blur(4px);
@@ -55,7 +50,6 @@ body {
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
-/* Buttons */
 .qz-btn {
   appearance: none;
   border: 1px solid #d1d5db;
@@ -76,12 +70,9 @@ body {
   color: #fff;
   border-color: #111827;
 }
-.qz-btn--primary:hover {
-  background: #1f2937;
-  border-color: #1f2937;
-}
+.qz-btn--primary:hover { background: #1f2937; border-color: #1f2937; }
 
-/* ===== Intro card ===== */
+/* Intro card */
 .qz-intro {
   position: fixed;
   left: 50%;
@@ -89,7 +80,6 @@ body {
   transform: translate(-50%, -50%);
   z-index: 9998;
   pointer-events: none;
-
   max-width: 680px;
   width: calc(100vw - 32px);
   background: rgba(255, 255, 255, 0.88);
@@ -99,21 +89,19 @@ body {
   text-align: center;
   box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
-
 .qz-intro h1 {
   margin: 0 0 8px;
   font-size: clamp(24px, 5vw, 36px);
   font-weight: 800;
   color: #1f2937;
 }
-
 .qz-intro p {
   margin: 6px 0;
   color: #374151;
   font-size: clamp(14px, 3.2vw, 18px);
 }
 
-/* ===== Try again CTA ===== */
+/* Try again CTA */
 .qz-cta {
   position: fixed;
   left: 50%;
@@ -128,7 +116,7 @@ body {
 }
 
 /* Mobile polish */
-@media (hover: none) and (pointer: coarse)) {
+@media (hover: none) and (pointer: coarse) {
   .qz-btn { padding: 12px 16px; font-size: 16px; }
   .qz-controls { gap: 10px; padding: 10px; }
 }
