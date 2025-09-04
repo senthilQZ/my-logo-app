@@ -1,4 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
+import './App.css';
+
+export default function DrawPerfectLogo() {
+  const canvasRef = useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [points, setPoints] = useState([]);
+  const [result, setResult] = useState(null);
+  const [showGrid, setShowGrid] = useState(true);
+  const [bestScore, setBestScore] = useState(0);
+  const [attempts, setAttempts] = useState(0);
+  
+  // [I'll give you the complete component code next]
+  
+  return (
+    import React, { useState, useRef, useEffect } from 'react';
 
 export default function DrawPerfectLogo() {
   const canvasRef = useRef(null);
@@ -10,7 +25,8 @@ export default function DrawPerfectLogo() {
   const [attempts, setAttempts] = useState(0);
   
   // Function to evaluate QualiZeal logo quality
-  const evaluateLogo = (points) => {
+  //const evaluateLogo = (points) => {
+const evaluateLogo = (points: Array<{x: number, y: number}>) => {
     if (points.length < 15) {
       return { score: 0, message: "Draw the complete QualiZeal logo!" };
     }
@@ -325,7 +341,8 @@ export default function DrawPerfectLogo() {
     }
   };
 
-  const getMousePos = (e) => {
+  //const getMousePos = (e) => {
+const getMousePos = (e: React.MouseEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
     
@@ -336,7 +353,8 @@ export default function DrawPerfectLogo() {
     };
   };
 
-  const getTouchPos = (e) => {
+  //const getTouchPos = (e) => {
+const getTouchPos = (e: React.TouchEvent) => {
     if (e.touches.length === 0) return null;
     const canvas = canvasRef.current;
     if (!canvas) return null;
@@ -348,14 +366,16 @@ export default function DrawPerfectLogo() {
     };
   };
 
-  const startDrawing = (pos) => {
+  //const startDrawing = (pos) => {
+const startDrawing = (pos: {x: number, y: number} | null) => {
     if (!pos) return;
     setIsDrawing(true);
     setPoints([pos]);
     setResult(null);
   };
 
-  const draw = (pos) => {
+  //const draw = (pos) => {
+const draw = (pos: {x: number, y: number} | null) => {
     if (!pos || !isDrawing || result) return;
     setPoints(prev => [...prev, pos]);
   };
@@ -441,9 +461,9 @@ export default function DrawPerfectLogo() {
       {/* Instructions */}
       {points.length === 0 && !result && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-          <h1 className="text-4xl font-bold mb-4">Draw the perfect logo</h1>
+          <h1 className="text-4xl font-bold mb-4">Draw the perfect QualiZeal logo</h1>
           <p className="text-gray-600 text-lg">Click and drag to begin</p>
-          <p className="text-gray-500 text-sm mt-2">Tip: Include both text and symbol elements</p>
+          //<p className="text-gray-500 text-sm mt-2">Tip: Include both text and symbol elements</p>
           <p className="text-gray-500 text-sm mt-1">Best score: {bestScore} | Attempts: {attempts}</p>
         </div>
       )}
@@ -462,3 +482,10 @@ export default function DrawPerfectLogo() {
     </div>
   );
 }
+  );
+}
+
+
+
+
+
