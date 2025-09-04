@@ -31,6 +31,32 @@ export default function DrawPerfectLogo() {
     const centerX = (minX + maxX) / 2;
     const centerY = (minY + maxY) / 2;
 
+
+{points.length === 0 && !result && (
+  <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
+    <div className="max-w-xl mx-auto text-center bg-white/85 backdrop-blur-sm border border-gray-200 rounded-2xl shadow p-6">
+      <h1 className="text-4xl font-bold mb-3 text-gray-800">Draw the perfect logo</h1>
+      <p className="text-gray-700 text-lg">QualiZealots!!, Please Click and drag to draw the logo</p>
+      <p className="text-gray-600 text-sm mt-2">Tip: Use the grid and aim for smooth strokes</p>
+      <p className="text-gray-500 text-sm mt-1">Best score: {bestScore} | Attempts: {attempts}</p>
+    </div>
+  </div>
+)}
+
+
+useEffect(() => {
+  const onKey = (e: KeyboardEvent) => {
+    const k = e.key.toLowerCase();
+    if (k === 'c') clearCanvas();
+    if (k === 'r') resetAll();
+    if (k === 'g') setShowGrid(s => !s);
+  };
+  window.addEventListener('keydown', onKey);
+  return () => window.removeEventListener('keydown', onKey);
+}, []);
+
+
+
     // circularity
     let circularityScore = 0;
     const expectedRadius = Math.min(drawingWidth, drawingHeight) / 3;
@@ -205,7 +231,8 @@ export default function DrawPerfectLogo() {
         ctx.font = '16px system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('Draw QualiZeal's logo', cx, cy - target * 0.75);
+        ctx.fillText("Draw QualiZeal's logo", cx, cy - target * 0.75);
+
       }
     }
 
@@ -253,8 +280,14 @@ export default function DrawPerfectLogo() {
   };
 
   const startDrawing = (pos: Point | null) => { if (!pos) return; setIsDrawing(true); setPoints([pos]); setResult(null); };
-  const draw = (pos: Point | null) => { if (!pos || !isDrawing || result) return; setPoints(prev => [...prev, pos]); };
-  const stopDrawing = () => {
+  const draw = (pos: Point | null) => {
+  if (!pos || !isDrawing || result) return;
+  const now = performance.now();
+  if (now - lastAddRef.current < ADD_POINT_EVERY_MS) return;
+  lastAddRef.current = now;
+  setPoints(prev => [...prev, pos]);
+}; 
+ const stopDrawing = () => {
     if (!isDrawing || result) return;
     setIsDrawing(false);
     const evaluation = evaluateLogo(points);
@@ -274,18 +307,18 @@ export default function DrawPerfectLogo() {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-white">
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 cursor-crosshair"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{ zIndex: 1 }}
-      />
+<canvas
+  ref={canvasRef}
+  className="absolute inset-0 cursor-crosshair"
+  onMouseDown={handleMouseDown}
+  onMouseMove={handleMouseMove}
+  onMouseUp={handleMouseUp}
+  onMouseLeave={handleMouseUp}
+  onTouchStart={handleTouchStart}
+  onTouchMove={handleTouchMove}
+  onTouchEnd={handleTouchEnd}
+  style={{ zIndex: 0, touchAction: 'none' }}   // ⬅️ important
+/>
 
       <div className="absolute top-4 left-4 z-10">
   <div className="flex gap-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl shadow-sm p-2">
@@ -315,17 +348,18 @@ export default function DrawPerfectLogo() {
   </div>
 </div>
 
+const resetAll = () => {
+  setPoints([]);
+  setResult(null);
+  setAttempts(0);
+  setBestScore(0);
+  setShowGrid(true);
+  setIsDrawing(false);
+};
 
-{!isDrawing && points.length === 0 && !result && (
-  <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
-    <div className="max-w-xl mx-auto text-center bg-white/85 backdrop-blur-sm border border-gray-200 rounded-2xl shadow p-6">
-      <h1 className="text-4xl font-bold mb-3 text-gray-800">Draw the perfect logo</h1>
-      <p className="text-gray-700 text-lg">QualiZealots!!, Please Click and drag to draw the logo</p>
-      <p className="text-gray-600 text-sm mt-2">Tip: Use the grid and aim for smooth strokes</p>
-      <p className="text-gray-500 text-sm mt-1">Best score: {bestScore} | Attempts: {attempts}</p>
-    </div>
-  </div>
-)}
+const lastAddRef = useRef<number>(0);
+const ADD_POINT_EVERY_MS = 10; // ~100 Hz; tweak if you like
+
 
       {result && (
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
