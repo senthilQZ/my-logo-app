@@ -1,12 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
-// Update this path to the exact location/name of your file in src/
+import React, { useEffect, useRef, useState } from 'react';
 import QualiZealLogo from './QualiZeal Monogram Colored.svg';
 import './App.css';
+
 interface Point { x: number; y: number; }
 interface EvaluationResult { score: number; message: string; }
 
-export default function DrawPerfectLogo() {
+export default function App() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const logoImgRef = useRef<HTMLImageElement | null>(null);
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [points, setPoints] = useState<Point[]>([]);
@@ -15,66 +17,56 @@ export default function DrawPerfectLogo() {
   const [bestScore, setBestScore] = useState(0);
   const [attempts, setAttempts] = useState(0);
 
-  // cache the SVG once loaded
-  const logoImgRef = useRef<HTMLImageElement | null>(null);
-
-  // throttle for smoother drawing
+  // tiny throttle for smoother lines
   const lastAddRef = useRef<number>(0);
-  const ADD_POINT_EVERY_MS = 10; // ~100 Hz
+  const ADD_POINT_EVERY_MS = 10;
 
-  // ===== Evaluation =====
+  // ---------- scoring ----------
   const evaluateLogo = (pts: Point[]): EvaluationResult => {
-    if (pts.length < 15) return { score: 0, message: "Draw the complete logo!" };
+    if (pts.length < 15) return { score: 0, message: 'Draw the complete logo!' };
     const canvas = canvasRef.current;
-    if (!canvas) return { score: 0, message: "Error evaluating drawing" };
+    if (!canvas) return { score: 0, message: 'Error evaluating drawing' };
 
-    const displayWidth = canvas.width / (window.devicePixelRatio || 1);
-    const displayHeight = canvas.height / (window.devicePixelRatio || 1);
+    const dpr = window.devicePixelRatio || 1;
+    const displayWidth = canvas.width / dpr;
+    const displayHeight = canvas.height / dpr;
 
-    let minX = Math.min(...pts.map(p => p.x));
-    let maxX = Math.max(...pts.map(p => p.x));
-    let minY = Math.min(...pts.map(p => p.y));
-    let maxY = Math.max(...pts.map(p => p.y));
-    const drawingWidth = maxX - minX;
-    const drawingHeight = maxY - minY;
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
+    const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const drawingWidth = maxX - minX, drawingHeight = maxY - minY;
+    const centerX = (minX + maxX) / 2, centerY = (minY + maxY) / 2;
 
     // circularity
-    let circularityScore = 0;
+    let circularityScore = 0, circularPoints = 0, totalVar = 0;
     const expectedRadius = Math.min(drawingWidth, drawingHeight) / 3;
-    let circularPoints = 0;
-    let totalRadiusVariance = 0;
-    for (const point of pts) {
-      const dist = Math.hypot(point.x - centerX, point.y - centerY);
-      if (dist >= expectedRadius * 0.6 && dist <= expectedRadius * 1.4) {
-        circularPoints++;
-        totalRadiusVariance += Math.abs(dist - expectedRadius);
+    for (const p of pts) {
+      const d = Math.hypot(p.x - centerX, p.y - centerY);
+      if (d >= expectedRadius * 0.6 && d <= expectedRadius * 1.4) {
+        circularPoints++; totalVar += Math.abs(d - expectedRadius);
       }
     }
-    if (circularPoints > 0) {
-      const avgVariance = totalRadiusVariance / circularPoints;
-      const consistency = Math.max(0, 1 - (avgVariance / expectedRadius));
+    if (circularPoints) {
+      const avgVar = totalVar / circularPoints;
+      const consistency = Math.max(0, 1 - (avgVar / expectedRadius));
       circularityScore = (circularPoints / pts.length) * consistency;
     }
 
     // arrow/lines
-    let arrowScore = 0;
-    let straightSegments = 0;
-    let diagonalSegments = 0;
+    let straightSegments = 0, diagonalSegments = 0;
     for (let i = 3; i < pts.length - 3; i++) {
       const p1 = pts[i - 3], p2 = pts[i], p3 = pts[i + 3];
-      const dist1 = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-      const dist2 = Math.hypot(p3.x - p2.x, p3.y - p2.y);
+      const d1 = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      const d2 = Math.hypot(p3.x - p2.x, p3.y - p2.y);
       const direct = Math.hypot(p3.x - p1.x, p3.y - p1.y);
-      const straightness = direct / (dist1 + dist2);
+      const straightness = direct / (d1 + d2);
       if (straightness > 0.95) {
         straightSegments++;
         const angle = Math.atan2(p3.y - p1.y, p3.x - p1.x);
         if (Math.abs(angle) > Math.PI / 6 && Math.abs(angle) < Math.PI * 5 / 6) diagonalSegments++;
       }
     }
-    arrowScore = Math.min(1, (straightSegments / (pts.length * 0.15)) * (1 + diagonalSegments / 10));
+    const arrowScore = Math.min(1, (straightSegments / (pts.length * 0.15)) * (1 + diagonalSegments / 10));
 
     // completeness
     let completenessScore = 0;
@@ -109,7 +101,6 @@ export default function DrawPerfectLogo() {
       smoothnessScore = Math.max(0, 1 - avgDeviation);
     }
 
-    // final
     let totalScore = Math.round((
       completenessScore * 0.45 +
       circularityScore  * 0.25 +
@@ -120,166 +111,111 @@ export default function DrawPerfectLogo() {
     if (smoothnessScore > 0.8 && completenessScore > 0.7) totalScore += 5;
     totalScore = Math.max(0, Math.min(100, totalScore));
 
-    let message;
+    let message = "Keep trying! Focus on the circular ring! 🎨";
     if (totalScore >= 95) message = "Perfect! Master-level logo! 🏆";
     else if (totalScore >= 85) message = "Excellent! Nearly perfect logo! 🎯";
     else if (totalScore >= 70) message = "Great work! Very recognizable! 👏";
     else if (totalScore >= 55) message = "Good job! Nice logo elements! 💪";
     else if (totalScore >= 40) message = "Not bad! Keep practicing! 🖊️";
     else if (totalScore >= 25) message = "Getting there! Try the ring + arrow! 🔄";
-    else message = "Keep trying! Focus on the circular ring! 🎨";
 
     return { score: totalScore, message };
   };
 
-  // ===== Handlers =====
-  const resetAll = () => {
-    setPoints([]);
-    setResult(null);
-    setAttempts(0);
-    setBestScore(0);
-    setShowGrid(true);
-    setIsDrawing(false);
-  };
-
-  const getMousePos = (e: React.MouseEvent): Point | null => {
-    const canvas = canvasRef.current; if (!canvas) return null;
-    const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  };
-  const getTouchPos = (e: React.TouchEvent): Point | null => {
-    if (e.touches.length === 0) return null;
-    const canvas = canvasRef.current; if (!canvas) return null;
-    const rect = canvas.getBoundingClientRect();
-    return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-  };
-
-  const startDrawing = (pos: Point | null) => {
-    if (!pos) return;
-    setIsDrawing(true);
-    setPoints([pos]);
-    setResult(null);
-  };
-
-  const draw = (pos: Point | null) => {
-    if (!pos || !isDrawing || result) return;
-    const now = performance.now();
-    if (now - lastAddRef.current < ADD_POINT_EVERY_MS) return;
-    lastAddRef.current = now;
-    setPoints(prev => [...prev, pos]);
-  };
-
-  const stopDrawing = () => {
-    if (!isDrawing || result) return;
-    setIsDrawing(false);
-    const evaluation = evaluateLogo(points);
-    setResult(evaluation);
-    setAttempts(prev => prev + 1);
-    if (evaluation.score > bestScore) setBestScore(evaluation.score);
-  };
-
-  const clearCanvas = () => {
-    setPoints([]);
-    setResult(null);
-  };
-
-  // ===== Effects =====
-  // Size/scale & non-skew transform
+  // ---------- canvas sizing (mobile-safe) ----------
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const applySize = () => {
-      const scale = window.devicePixelRatio || 1;
-      canvas.width = window.innerWidth * scale;
-      canvas.height = window.innerHeight * scale;
-      canvas.style.width = `${window.innerWidth}px`;
-      canvas.style.height = `${window.innerHeight}px`;
-      ctx.setTransform(scale, 0, 0, scale, 0, 0); // reset then scale
-      drawCanvas();
-    };
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        const dpr = window.devicePixelRatio || 1;
 
-    applySize();
-    window.addEventListener('resize', applySize);
-    return () => window.removeEventListener('resize', applySize);
+        // CSS size
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+
+        // Buffer size
+        canvas.width = Math.max(1, Math.floor(width * dpr));
+        canvas.height = Math.max(1, Math.floor(height * dpr));
+
+        // Reset transform, then scale—prevents skew/compounding
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
+
+        drawCanvas();
+      }
+    });
+
+    ro.observe(container);
+    return () => ro.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Preload SVG once
+  // ---------- preload SVG ----------
   useEffect(() => {
     const img = new Image();
     img.src = QualiZealLogo;
-    img.onload = () => {
-      logoImgRef.current = img;
-      drawCanvas();
-    };
+    img.onload = () => { logoImgRef.current = img; drawCanvas(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keyboard shortcuts (c = clear, r = reset, g = toggle grid)
+  // ---------- keyboard shortcuts ----------
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
-      if (k === 'c') clearCanvas();
-      if (k === 'r') resetAll();
-      if (k === 'g') setShowGrid(s => !s);
+      if (k === 'c') { e.preventDefault(); clearCanvas(); }
+      if (k === 'r') { e.preventDefault(); resetAll(); }
+      if (k === 'g') { e.preventDefault(); setShowGrid(s => !s); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Redraw on state changes
-  useEffect(() => {
-    drawCanvas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points, showGrid, result, bestScore, attempts]);
-
-  // ===== Drawing routine =====
+  // ---------- draw routine ----------
   const drawCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const scale = window.devicePixelRatio || 1;
-    const displayWidth = canvas.width / scale;
-    const displayHeight = canvas.height / scale;
+    const dpr = window.devicePixelRatio || 1;
+    const width = canvas.width / dpr;
+    const height = canvas.height / dpr;
 
     // clear
-    ctx.clearRect(0, 0, displayWidth, displayHeight);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, displayWidth, displayHeight);
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, width, height);
 
     // grid + guide
     if (showGrid) {
       ctx.strokeStyle = '#f0f0f0';
       ctx.lineWidth = 1;
-      const gridSize = 40;
-      for (let x = 0; x < displayWidth; x += gridSize) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, displayHeight); ctx.stroke();
-      }
-      for (let y = 0; y < displayHeight; y += gridSize) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(displayWidth, y); ctx.stroke();
-      }
+      const grid = 40;
+      for (let x = 0; x < width; x += grid) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); }
+      for (let y = 0; y < height; y += grid) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
 
       if (points.length === 0 && logoImgRef.current) {
         const img = logoImgRef.current;
-        const target = Math.min(displayWidth, displayHeight) * 0.22;
+        const target = Math.min(width, height) * 0.22;
         const aspect = (img.width || 1) / (img.height || 1);
-        let drawW = target, drawH = target;
-        if (aspect >= 1) { drawH = target / aspect; } else { drawW = target * aspect; }
-        const cx = displayWidth / 2, cy = displayHeight / 2;
+        let w = target, h = target;
+        if (aspect >= 1) { h = target / aspect; } else { w = target * aspect; }
+        const cx = width / 2, cy = height / 2;
 
         ctx.save();
         ctx.globalAlpha = 0.95;
-        ctx.shadowColor = 'rgba(0,0,0,0.12)';
-        ctx.shadowBlur = 12;
-        ctx.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
+        ctx.shadowColor = 'rgba(0,0,0,0.10)';
+        ctx.shadowBlur = 10;
+        ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
         ctx.restore();
 
-        ctx.fillStyle = '#888';
+        ctx.fillStyle = '#666';
         ctx.font = '16px system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -287,9 +223,9 @@ export default function DrawPerfectLogo() {
       }
     }
 
-    // user stroke
+    // user lines
     if (points.length > 1) {
-      ctx.strokeStyle = '#000000';
+      ctx.strokeStyle = '#000';
       ctx.lineWidth = 3;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
@@ -301,29 +237,68 @@ export default function DrawPerfectLogo() {
 
     // result overlay
     if (result) {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      ctx.fillRect(0, 0, displayWidth, displayHeight);
-
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillRect(0, 0, width, height);
       ctx.fillStyle = '#000';
-      ctx.font = 'bold 72px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`${result.score}/100`, displayWidth / 2, displayHeight / 2 - 50);
-
+      ctx.font = 'bold 72px system-ui, -apple-system, sans-serif';
+      ctx.fillText(`${result.score}/100`, width / 2, height / 2 - 50);
       ctx.font = '24px system-ui, -apple-system, sans-serif';
-      ctx.fillText(result.message, displayWidth / 2, displayHeight / 2 + 30);
-
+      ctx.fillText(result.message, width / 2, height / 2 + 30);
       ctx.font = '18px system-ui, -apple-system, sans-serif';
-      ctx.fillText(`Best score: ${bestScore} | Attempts: ${attempts}`, displayWidth / 2, displayHeight / 2 + 70);
+      ctx.fillText(`Best score: ${bestScore} | Attempts: ${attempts}`, width / 2, height / 2 + 70);
     }
   };
 
-  // ===== Render =====
+  // ---------- pointer helpers ----------
+  const getMousePos = (e: React.MouseEvent): Point | null => {
+    const canvas = canvasRef.current; if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+  const getTouchPos = (e: React.TouchEvent): Point | null => {
+    const canvas = canvasRef.current; if (!canvas || e.touches.length === 0) return null;
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+  };
+
+  // ---------- handlers ----------
+  const startDrawing = (pos: Point | null) => {
+    if (!pos) return;
+    setIsDrawing(true);
+    setResult(null);
+    setPoints([pos]);
+  };
+  const draw = (pos: Point | null) => {
+    if (!pos || !isDrawing || result) return;
+    const now = performance.now();
+    if (now - lastAddRef.current < ADD_POINT_EVERY_MS) return;
+    lastAddRef.current = now;
+    setPoints(prev => [...prev, pos]);
+  };
+  const stopDrawing = () => {
+    if (!isDrawing || result) return;
+    setIsDrawing(false);
+    const r = evaluateLogo(points);
+    setResult(r);
+    setAttempts(a => a + 1);
+    if (r.score > bestScore) setBestScore(r.score);
+  };
+  const clearCanvas = () => { setPoints([]); setResult(null); };
+  const resetAll = () => {
+    setPoints([]);
+    setResult(null);
+    setAttempts(0);
+    setBestScore(0);
+    setShowGrid(true);
+    setIsDrawing(false);
+  };
+
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-white">
+    <div ref={containerRef} className="qz-app">
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 cursor-crosshair"
         onMouseDown={(e) => { e.preventDefault(); startDrawing(getMousePos(e)); }}
         onMouseMove={(e) => { e.preventDefault(); draw(getMousePos(e)); }}
         onMouseUp={(e) => { e.preventDefault(); stopDrawing(); }}
@@ -331,90 +306,31 @@ export default function DrawPerfectLogo() {
         onTouchStart={(e) => { e.preventDefault(); startDrawing(getTouchPos(e)); }}
         onTouchMove={(e) => { e.preventDefault(); draw(getTouchPos(e)); }}
         onTouchEnd={(e) => { e.preventDefault(); stopDrawing(); }}
-        style={{ zIndex: 0, touchAction: 'none' }}
       />
 
       {/* Controls */}
-      <div className="absolute top-4 left-4 z-10">
-        <div className="flex gap-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl shadow-sm p-2">
-          <button
-            onClick={clearCanvas}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            title="Clear your current drawing but keep scores"
-          >
-            Clear
-          </button>
-
-          <button
-            onClick={resetAll}
-            className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-            title="Reset everything (scores & attempts)"
-          >
-            Reset
-          </button>
-
-          <button
-            onClick={() => setShowGrid(s => !s)}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            title="Toggle grid and sample logo"
-          >
-            {showGrid ? 'Hide guide' : 'Show guide'}
-          </button>
-        </div>
+      <div className="qz-controls">
+        <button className="qz-btn" onClick={clearCanvas} title="Clear your current drawing but keep scores">Clear</button>
+        <button className="qz-btn qz-btn--primary" onClick={resetAll} title="Reset everything (scores & attempts)">Reset</button>
+        <button className="qz-btn" onClick={() => setShowGrid(s => !s)} title="Toggle grid and sample logo">
+          {showGrid ? 'Hide guide' : 'Show guide'}
+        </button>
       </div>
 
-      {/* Intro card (shows until the first stroke) */}
+      {/* Intro card */}
       {points.length === 0 && !result && (
-        <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
-          <div className="max-w-xl mx-auto text-center bg-white/85 backdrop-blur-sm border border-gray-200 rounded-2xl shadow p-6">
-            <h1 className="text-4xl font-bold mb-3 text-gray-800">Draw the perfect logo</h1>
-            <p className="text-gray-700 text-lg">QualiZealots!! Please click and drag to draw the logo</p>
-            <p className="text-gray-600 text-sm mt-2">Tip: Use the grid and aim for smooth strokes</p>
-            <p className="text-gray-500 text-sm mt-1">Best score: {bestScore} | Attempts: {attempts}</p>
-          </div>
+        <div className="qz-intro">
+          <h1>Draw the perfect logo</h1>
+          <p>QualiZealots!! Please click and drag to draw the logo</p>
+          <p>Tip: Use the grid and aim for smooth strokes</p>
+          <p>Best score: {bestScore} | Attempts: {attempts}</p>
         </div>
       )}
-return (
-  <div ref={containerRef} className="qz-app">
-    <canvas ref={canvasRef} />
-
-    {/* Controls */}
-    <div className="qz-controls">
-      <button className="qz-btn" onClick={clearCanvas}>Clear</button>
-      <button className="qz-btn qz-btn--primary" onClick={resetAll}>Reset</button>
-      <button className="qz-btn" onClick={() => setShowGrid(s => !s)}>
-        {showGrid ? 'Hide guide' : 'Show guide'}
-      </button>
-    </div>
-
-    {/* Intro card */}
-    {points.length === 0 && !result && (
-      <div className="qz-intro">
-        <h1>Draw the perfect logo</h1>
-        <p>QualiZealots!! Please click and drag to draw the logo</p>
-        <p>Tip: Use the grid and aim for smooth strokes</p>
-        <p>Best score: {bestScore} | Attempts: {attempts}</p>
-      </div>
-    )}
-
-    {/* Try again CTA */}
-    {result && (
-      <div className="qz-cta">
-        <button className="qz-btn qz-btn--primary" onClick={clearCanvas}>Try again</button>
-      </div>
-    )}
-  </div>
-);
 
       {/* Try again CTA */}
       {result && (
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
-          <button
-            onClick={clearCanvas}
-            className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            Try again
-          </button>
+        <div className="qz-cta">
+          <button className="qz-btn qz-btn--primary" onClick={clearCanvas}>Try again</button>
         </div>
       )}
     </div>
