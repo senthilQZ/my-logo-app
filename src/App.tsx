@@ -20,104 +20,166 @@ export default function App() {
   const lastAddRef = useRef<number>(0);
   const ADD_POINT_EVERY_MS = 10;
 
-  const evaluateLogo = (pts: Point[]): EvaluationResult => {
-    if (pts.length < 15) return { score: 0, message: 'Draw the complete logo!' };
-    const canvas = canvasRef.current;
-    if (!canvas) return { score: 0, message: 'Error evaluating drawing' };
+ const evaluateLogo = (pts: Point[]): EvaluationResult => {
+  if (pts.length < 15) return { score: 0, message: 'Draw the complete logo!' };
+  const canvas = canvasRef.current;
+  if (!canvas) return { score: 0, message: 'Error evaluating drawing' };
 
-    const dpr = window.devicePixelRatio || 1;
-    const displayWidth = canvas.width / dpr;
-    const displayHeight = canvas.height / dpr;
+  const dpr = window.devicePixelRatio || 1;
+  const displayWidth = canvas.width / dpr;
+  const displayHeight = canvas.height / dpr;
 
-    const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
-    const minX = Math.min(...xs), maxX = Math.max(...xs);
-    const minY = Math.min(...ys), maxY = Math.max(...ys);
-    const drawingWidth = maxX - minX, drawingHeight = maxY - minY;
-    const centerX = (minX + maxX) / 2, centerY = (minY + maxY) / 2;
+  // --- bounds / center ---
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const drawingWidth = maxX - minX, drawingHeight = maxY - minY;
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
 
-    // circularity
-    let circularityScore = 0, circularPoints = 0, totalVar = 0;
-    const expectedRadius = Math.min(drawingWidth, drawingHeight) / 3;
-    for (const p of pts) {
-      const d = Math.hypot(p.x - centerX, p.y - centerY);
-      if (d >= expectedRadius * 0.6 && d <= expectedRadius * 1.4) {
-        circularPoints++; totalVar += Math.abs(d - expectedRadius);
-      }
+  // --- RING detection (coverage + consistency) ---
+  const expectedR = Math.min(drawingWidth, drawingHeight) / 3;
+  const tolLow = expectedR * 0.75;
+  const tolHigh = expectedR * 1.25;
+
+  let onRing: number[] = [];        // distances close to ring
+  let totalVar = 0;
+  let ringCount = 0;
+
+  // angular coverage buckets
+  const BUCKETS = 36;               // 10° per bucket
+  const bucketHasPoint = new Array(BUCKETS).fill(0);
+
+  for (const p of pts) {
+    const dx = p.x - cx, dy = p.y - cy;
+    const r = Math.hypot(dx, dy);
+    if (r >= tolLow && r <= tolHigh) {
+      ringCount++;
+      totalVar += Math.abs(r - expectedR);
+      onRing.push(r);
+      // angle 0..2π -> bucket
+      let ang = Math.atan2(dy, dx);
+      if (ang < 0) ang += Math.PI * 2;
+      const b = Math.min(BUCKETS - 1, Math.floor((ang / (Math.PI * 2)) * BUCKETS));
+      bucketHasPoint[b] = 1;
     }
-    if (circularPoints) {
-      const avgVar = totalVar / circularPoints;
-      const consistency = Math.max(0, 1 - (avgVar / expectedRadius));
-      circularityScore = (circularPoints / pts.length) * consistency;
+  }
+
+  let ringCoverage = 0, ringConsistency = 0;
+  if (ringCount > 0) {
+    ringCoverage = bucketHasPoint.reduce((a, b) => a + b, 0) / BUCKETS;            // 0..1
+    const avgVar = totalVar / ringCount;
+    ringConsistency = Math.max(0, 1 - (avgVar / expectedR));                        // 0..1
+  }
+  // ring score needs both coverage & consistency
+  const ringScore = Math.min(1, ringCoverage * (0.5 + 0.5 * ringConsistency));
+
+  // --- ARROW detection (straight segments + sharp corners) ---
+  // straightness via 3-point windows (i-2, i, i+2)
+  let straightSegments = 0;
+  let diagonalish = 0;
+  const STRAIGHT_THRESHOLD = 0.98;  // stricter than before
+  for (let i = 2; i < pts.length - 2; i++) {
+    const a = pts[i - 2], b = pts[i], c = pts[i + 2];
+    const d1 = Math.hypot(b.x - a.x, b.y - a.y);
+    const d2 = Math.hypot(c.x - b.x, c.y - b.y);
+    const direct = Math.hypot(c.x - a.x, c.y - a.y);
+    const straightness = direct / (d1 + d2 + 1e-6);
+    if (straightness > STRAIGHT_THRESHOLD) {
+      straightSegments++;
+      const ang = Math.atan2(c.y - a.y, c.x - a.x);
+      // diagonal: ~30°..150° or -30°..-150° (avoid perfectly horizontal/vertical)
+      if (Math.abs(ang) > Math.PI / 6 && Math.abs(ang) < Math.PI * 5 / 6) diagonalish++;
     }
+  }
+  const straightScore = Math.min(1, straightSegments / (pts.length * 0.12));
+  const diagonalScore = Math.min(1, diagonalish / Math.max(1, straightSegments));
 
-    // arrow/lines
-    let straightSegments = 0, diagonalSegments = 0;
-    for (let i = 3; i < pts.length - 3; i++) {
-      const p1 = pts[i - 3], p2 = pts[i], p3 = pts[i + 3];
-      const d1 = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-      const d2 = Math.hypot(p3.x - p2.x, p3.y - p2.y);
-      const direct = Math.hypot(p3.x - p1.x, p3.y - p1.y);
-      const straightness = direct / (d1 + d2);
-      if (straightness > 0.95) {
-        straightSegments++;
-        const angle = Math.atan2(p3.y - p1.y, p3.x - p1.x);
-        if (Math.abs(angle) > Math.PI / 6 && Math.abs(angle) < Math.PI * 5 / 6) diagonalSegments++;
-      }
+  // corner count (a circle has low/steady curvature; an arrow has ≥1 sharp turn)
+  let sharpCorners = 0;
+  for (let i = 2; i < pts.length - 2; i++) {
+    const p0 = pts[i - 1], p1 = pts[i], p2 = pts[i + 1];
+    const a1 = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+    const a2 = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+    let diff = Math.abs(a2 - a1);
+    if (diff > Math.PI) diff = 2 * Math.PI - diff;
+    if (diff > 0.9) sharpCorners++; // ~> 50° turn qualifies as a corner
+  }
+  // normalize corners (>=2 corners feels like an arrow shaft+head)
+  const cornerScore = Math.min(1, sharpCorners / 3);
+
+  // Arrow requires BOTH straight lines and at least one sharp corner
+  let arrowScore = 0;
+  if (straightScore > 0.2 && cornerScore > 0.2) {
+    arrowScore = (straightScore * 0.5) + (cornerScore * 0.35) + (diagonalScore * 0.15);
+  } else {
+    arrowScore = Math.max(straightScore, cornerScore) * 0.3; // weak signal if only one present
+  }
+
+  // --- completeness gating ---
+  const hasGoodRing = ringScore >= 0.4;
+  const hasGoodArrow = arrowScore >= 0.35;
+
+  // completeness rewards having BOTH
+  let completeness = 0;
+  if (hasGoodRing && hasGoodArrow) completeness = Math.min(1, (ringScore + arrowScore) / 1.6);
+  else completeness = Math.max(ringScore, arrowScore) * 0.5;
+
+  // --- proportion & size (kept light; not a path to high scores alone) ---
+  const canvasArea = displayWidth * displayHeight;
+  const drawingArea = drawingWidth * drawingHeight;
+  const sizeRatio = drawingArea / canvasArea;
+  const aspectRatio = drawingWidth / Math.max(1e-6, drawingHeight);
+  let proportion = 1;
+  if (sizeRatio < 0.02) proportion *= sizeRatio / 0.02;
+  else if (sizeRatio > 0.4) proportion *= 0.8;
+  if (aspectRatio < 0.7 || aspectRatio > 1.4) proportion *= 0.85;
+
+  // --- smoothness (small influence; prevents jagged scribbles winning) ---
+  let smooth = 0;
+  if (pts.length > 20) {
+    let dev = 0;
+    for (let i = 1; i < pts.length - 1; i++) {
+      const a1 = Math.atan2(pts[i].y - pts[i - 1].y, pts[i].x - pts[i - 1].x);
+      const a2 = Math.atan2(pts[i + 1].y - pts[i].y, pts[i + 1].x - pts[i].x);
+      let diff = Math.abs(a2 - a1);
+      if (diff > Math.PI) diff = 2 * Math.PI - diff;
+      dev += diff;
     }
-    const arrowScore = Math.min(1, (straightSegments / (pts.length * 0.15)) * (1 + diagonalSegments / 10));
+    const avg = dev / (pts.length - 2);
+    smooth = Math.max(0, 1 - avg);
+  }
 
-    // completeness
-    let completenessScore = 0;
-    if (circularityScore > 0.2 && arrowScore > 0.1) {
-      completenessScore = Math.min(circularityScore + arrowScore, 1);
-    } else {
-      completenessScore = Math.max(circularityScore, arrowScore) * 0.6;
-    }
+  // --- final score ---
+  let total = (
+    completeness * 0.5 +
+    ringScore   * 0.25 +
+    arrowScore  * 0.15 +
+    proportion  * 0.07 +
+    smooth      * 0.03
+  ) * 100;
 
-    // proportions
-    const canvasArea = displayWidth * displayHeight;
-    const drawingArea = drawingWidth * drawingHeight;
-    const sizeRatio = drawingArea / canvasArea;
-    const aspectRatio = drawingWidth / drawingHeight;
-    let proportionScore = 1;
-    if (sizeRatio < 0.02) proportionScore *= sizeRatio / 0.02;
-    else if (sizeRatio > 0.4) proportionScore *= 0.7;
-    if (aspectRatio < 0.7 || aspectRatio > 1.4) proportionScore *= 0.8;
+  // hard caps to prevent circle-only or arrow-only from ranking high
+  if (hasGoodRing && !hasGoodArrow) total = Math.min(total, 50); // circle-only cap
+  if (!hasGoodRing && hasGoodArrow) total = Math.min(total, 60); // arrow-only cap
 
-    // smoothness
-    let smoothnessScore = 0;
-    if (pts.length > 20) {
-      let totalDeviation = 0;
-      for (let i = 1; i < pts.length - 1; i++) {
-        const a1 = Math.atan2(pts[i].y - pts[i - 1].y, pts[i].x - pts[i - 1].x);
-        const a2 = Math.atan2(pts[i + 1].y - pts[i].y, pts[i + 1].x - pts[i].x);
-        let diff = Math.abs(a2 - a1);
-        if (diff > Math.PI) diff = 2 * Math.PI - diff;
-        totalDeviation += diff;
-      }
-      const avgDeviation = totalDeviation / (pts.length - 2);
-      smoothnessScore = Math.max(0, 1 - avgDeviation);
-    }
+  // bonus for really solid both
+  if (hasGoodRing && hasGoodArrow && completeness > 0.7 && smooth > 0.7) total += 3;
 
-    let totalScore = Math.round((
-      completenessScore * 0.45 +
-      circularityScore  * 0.25 +
-      arrowScore        * 0.15 +
-      proportionScore   * 0.10 +
-      smoothnessScore   * 0.05
-    ) * 100);
-    if (smoothnessScore > 0.8 && completenessScore > 0.7) totalScore += 5;
-    totalScore = Math.max(0, Math.min(100, totalScore));
+  const score = Math.max(0, Math.min(100, Math.round(total)));
 
-    let message = 'Keep trying! Focus on the circular ring! 🎨';
-    if (totalScore >= 95) message = 'Perfect! Master-level logo! 🏆';
-    else if (totalScore >= 85) message = 'Excellent! Nearly perfect logo! 🎯';
-    else if (totalScore >= 70) message = 'Great work! Very recognizable! 👏';
-    else if (totalScore >= 55) message = 'Good job! Nice logo elements! 💪';
-    else if (totalScore >= 40) message = 'Not bad! Keep practicing! 🖊️';
-    else if (totalScore >= 25) message = 'Getting there! Try the ring + arrow! 🔄';
-    return { score: totalScore, message };
-  };
+  let message = 'Keep trying! Make the ring and arrow.';
+  if (hasGoodRing && !hasGoodArrow) message = 'Nice ring! Add a clear arrow.';
+  if (!hasGoodRing && hasGoodArrow) message = 'Arrow spotted! Add a proper ring.';
+  if (hasGoodRing && hasGoodArrow) {
+    if (score >= 95) message = 'Perfect! Master-level logo! 🏆';
+    else if (score >= 85) message = 'Excellent! Nearly perfect logo! 🎯';
+    else if (score >= 70) message = 'Great work! Very recognizable! 👏';
+    else if (score >= 55) message = 'Good job! Nice logo elements! 💪';
+    else message = 'Getting there! Strengthen ring + arrow! 🔄';
+  }
+
+  return { score, message };
+};
 
   // Canvas sizing (no skew; mobile-safe)
   useEffect(() => {
