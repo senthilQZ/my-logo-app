@@ -1,32 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 
-export default function DrawPerfectLogo() {
-  const canvasRef = useRef(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [points, setPoints] = useState([]);
-  const [result, setResult] = useState(null);
-  const [showGrid, setShowGrid] = useState(true);
-  const [bestScore, setBestScore] = useState(0);
-  const [attempts, setAttempts] = useState(0);
-  
-  // [I'll give you the complete component code next]
-  
-  return (
-    import React, { useState, useRef, useEffect } from 'react';
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface EvaluationResult {
+  score: number;
+  message: string;
+}
 
 export default function DrawPerfectLogo() {
-  const canvasRef = useRef(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [points, setPoints] = useState([]);
-  const [result, setResult] = useState(null);
+  const [points, setPoints] = useState<Point[]>([]);
+  const [result, setResult] = useState<EvaluationResult | null>(null);
   const [showGrid, setShowGrid] = useState(true);
   const [bestScore, setBestScore] = useState(0);
   const [attempts, setAttempts] = useState(0);
   
   // Function to evaluate QualiZeal logo quality
-  //const evaluateLogo = (points) => {
-const evaluateLogo = (points: Array<{x: number, y: number}>) => {
+  const evaluateLogo = (points: Point[]): EvaluationResult => {
     if (points.length < 15) {
       return { score: 0, message: "Draw the complete QualiZeal logo!" };
     }
@@ -108,10 +103,10 @@ const evaluateLogo = (points: Array<{x: number, y: number}>) => {
     if (circularityScore > 0.2 && arrowScore > 0.1) {
       completenessScore = Math.min(circularityScore + arrowScore, 1);
     } else {
-      completenessScore = Math.max(circularityScore, arrowScore) * 0.6; // Penalty for missing elements
+      completenessScore = Math.max(circularityScore, arrowScore) * 0.6;
     }
 
-    // Size and proportion requirements - more strict
+    // Size and proportion requirements
     const canvasArea = displayWidth * displayHeight;
     const drawingArea = drawingWidth * drawingHeight;
     const sizeRatio = drawingArea / canvasArea;
@@ -121,14 +116,14 @@ const evaluateLogo = (points: Array<{x: number, y: number}>) => {
     
     // Size penalties
     if (sizeRatio < 0.02) {
-      proportionScore *= sizeRatio / 0.02; // Too small
+      proportionScore *= sizeRatio / 0.02;
     } else if (sizeRatio > 0.4) {
-      proportionScore *= 0.7; // Too big
+      proportionScore *= 0.7;
     }
     
     // Aspect ratio (Q symbol should be roughly square)
     if (aspectRatio < 0.7 || aspectRatio > 1.4) {
-      proportionScore *= 0.8; // Not square enough
+      proportionScore *= 0.8;
     }
 
     // Precision bonus - smooth drawing gets extra points
@@ -140,7 +135,6 @@ const evaluateLogo = (points: Array<{x: number, y: number}>) => {
         const p2 = points[i];
         const p3 = points[i + 1];
         
-        // Calculate curvature/jerkiness
         const angle1 = Math.atan2(p2.y - p1.y, p2.x - p1.x);
         const angle2 = Math.atan2(p3.y - p2.y, p3.x - p2.x);
         let angleDiff = Math.abs(angle2 - angle1);
@@ -153,7 +147,7 @@ const evaluateLogo = (points: Array<{x: number, y: number}>) => {
       smoothnessScore = Math.max(0, 1 - avgDeviation);
     }
 
-    // Final score calculation with higher standards
+    // Final score calculation
     let totalScore = Math.round((
       completenessScore * 0.45 +
       circularityScore * 0.25 +
@@ -162,14 +156,13 @@ const evaluateLogo = (points: Array<{x: number, y: number}>) => {
       smoothnessScore * 0.05
     ) * 100);
 
-    // Remove easy bonus points, add precision bonus
     if (smoothnessScore > 0.8 && completenessScore > 0.7) {
-      totalScore += 5; // Only for really good drawings
+      totalScore += 5;
     }
     
     totalScore = Math.max(0, Math.min(100, totalScore));
 
-    // Adjusted messages for new scoring
+    // Messages
     let message;
     if (totalScore >= 95) {
       message = "Perfect! Master-level QualiZeal logo! 🏆";
@@ -195,13 +188,14 @@ const evaluateLogo = (points: Array<{x: number, y: number}>) => {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       
-      // Set canvas size and scale for high DPI displays
       const scale = window.devicePixelRatio || 1;
       canvas.width = window.innerWidth * scale;
       canvas.height = window.innerHeight * scale;
       canvas.style.width = window.innerWidth + 'px';
       canvas.style.height = window.innerHeight + 'px';
-      ctx.scale(scale, scale);
+      if (ctx) {
+        ctx.scale(scale, scale);
+      }
       
       const handleResize = () => {
         const scale = window.devicePixelRatio || 1;
@@ -209,7 +203,9 @@ const evaluateLogo = (points: Array<{x: number, y: number}>) => {
         canvas.height = window.innerHeight * scale;
         canvas.style.width = window.innerWidth + 'px';
         canvas.style.height = window.innerHeight + 'px';
-        ctx.scale(scale, scale);
+        if (ctx) {
+          ctx.scale(scale, scale);
+        }
         drawCanvas();
       };
       
@@ -227,6 +223,8 @@ const evaluateLogo = (points: Array<{x: number, y: number}>) => {
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
     const displayWidth = canvas.width / (window.devicePixelRatio || 1);
     const displayHeight = canvas.height / (window.devicePixelRatio || 1);
     
@@ -234,7 +232,7 @@ const evaluateLogo = (points: Array<{x: number, y: number}>) => {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, displayWidth, displayHeight);
     
-    // Draw reference logo outline (optional guide)
+    // Draw reference logo outline
     if (showGrid && points.length === 0) {
       const centerX = displayWidth / 2;
       const centerY = displayHeight / 2;
@@ -245,7 +243,6 @@ const evaluateLogo = (points: Array<{x: number, y: number}>) => {
       ctx.lineWidth = 2;
       ctx.setLineDash([10, 10]);
       
-      // Draw reference rectangle for logo placement
       ctx.strokeRect(
         centerX - logoWidth/2, 
         centerY - logoHeight/2, 
@@ -257,16 +254,13 @@ const evaluateLogo = (points: Array<{x: number, y: number}>) => {
       ctx.strokeStyle = '#d0d0d0';
       ctx.lineWidth = 2;
       
-      // Draw the "Q" symbol hint (circular Q with arrow)
       const qX = centerX;
       const qY = centerY;
       
-      // Draw circular Q
       ctx.beginPath();
       ctx.arc(qX, qY, 20, 0, 2 * Math.PI);
       ctx.stroke();
       
-      // Draw arrow through Q
       ctx.beginPath();
       ctx.moveTo(qX - 10, qY + 10);
       ctx.lineTo(qX + 10, qY - 10);
@@ -318,11 +312,9 @@ const evaluateLogo = (points: Array<{x: number, y: number}>) => {
     
     // Draw result overlay if exists
     if (result) {
-      // Semi-transparent overlay
       ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
       ctx.fillRect(0, 0, displayWidth, displayHeight);
       
-      // Score display
       ctx.fillStyle = '#000000';
       ctx.font = 'bold 72px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
@@ -331,18 +323,15 @@ const evaluateLogo = (points: Array<{x: number, y: number}>) => {
       const scoreText = `${result.score}/100`;
       ctx.fillText(scoreText, displayWidth / 2, displayHeight / 2 - 50);
       
-      // Message
       ctx.font = '24px system-ui, -apple-system, sans-serif';
       ctx.fillText(result.message, displayWidth / 2, displayHeight / 2 + 30);
       
-      // Stats
       ctx.font = '18px system-ui, -apple-system, sans-serif';
       ctx.fillText(`Best score: ${bestScore} | Attempts: ${attempts}`, displayWidth / 2, displayHeight / 2 + 70);
     }
   };
 
-  //const getMousePos = (e) => {
-const getMousePos = (e: React.MouseEvent) => {
+  const getMousePos = (e: React.MouseEvent): Point | null => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
     
@@ -353,8 +342,7 @@ const getMousePos = (e: React.MouseEvent) => {
     };
   };
 
-  //const getTouchPos = (e) => {
-const getTouchPos = (e: React.TouchEvent) => {
+  const getTouchPos = (e: React.TouchEvent): Point | null => {
     if (e.touches.length === 0) return null;
     const canvas = canvasRef.current;
     if (!canvas) return null;
@@ -366,16 +354,14 @@ const getTouchPos = (e: React.TouchEvent) => {
     };
   };
 
-  //const startDrawing = (pos) => {
-const startDrawing = (pos: {x: number, y: number} | null) => {
+  const startDrawing = (pos: Point | null) => {
     if (!pos) return;
     setIsDrawing(true);
     setPoints([pos]);
     setResult(null);
   };
 
-  //const draw = (pos) => {
-const draw = (pos: {x: number, y: number} | null) => {
+  const draw = (pos: Point | null) => {
     if (!pos || !isDrawing || result) return;
     setPoints(prev => [...prev, pos]);
   };
@@ -393,32 +379,32 @@ const draw = (pos: {x: number, y: number} | null) => {
     }
   };
 
-  const handleMouseDown = (e) => {
+  const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     startDrawing(getMousePos(e));
   };
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = (e: React.MouseEvent) => {
     e.preventDefault();
     draw(getMousePos(e));
   };
 
-  const handleMouseUp = (e) => {
+  const handleMouseUp = (e: React.MouseEvent) => {
     e.preventDefault();
     stopDrawing();
   };
 
-  const handleTouchStart = (e) => {
+  const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
     startDrawing(getTouchPos(e));
   };
 
-  const handleTouchMove = (e) => {
+  const handleTouchMove = (e: React.TouchEvent) => {
     e.preventDefault();
     draw(getTouchPos(e));
   };
 
-  const handleTouchEnd = (e) => {
+  const handleTouchEnd = (e: React.TouchEvent) => {
     e.preventDefault();
     stopDrawing();
   };
@@ -442,7 +428,6 @@ const draw = (pos: {x: number, y: number} | null) => {
         onTouchEnd={handleTouchEnd}
       />
       
-      {/* Controls */}
       <div className="absolute top-4 left-4 flex gap-2">
         <button
           onClick={clearCanvas}
@@ -458,17 +443,15 @@ const draw = (pos: {x: number, y: number} | null) => {
         </button>
       </div>
       
-      {/* Instructions */}
       {points.length === 0 && !result && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-          <h1 className="text-4xl font-bold mb-4">Draw the perfect QualiZeal logo</h1>
-          <p className="text-gray-600 text-lg">Click and drag to begin</p>
-          //<p className="text-gray-500 text-sm mt-2">Tip: Include both text and symbol elements</p>
+          <h1 className="text-4xl font-bold mb-4">Draw the perfect logo</h1>
+          <p className="text-gray-600 text-lg">Click and drag to draw your logo</p>
+          <p className="text-gray-500 text-sm mt-2">Tip: Include both text and symbol elements</p>
           <p className="text-gray-500 text-sm mt-1">Best score: {bestScore} | Attempts: {attempts}</p>
         </div>
       )}
       
-      {/* Try Again button */}
       {result && (
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
           <button
@@ -482,10 +465,3 @@ const draw = (pos: {x: number, y: number} | null) => {
     </div>
   );
 }
-  );
-}
-
-
-
-
-
