@@ -17,18 +17,16 @@ body {
 }
 
 /* ===== App Container ===== */
-/* Use dynamic viewport units to avoid mobile URL bar “vh” issues */
 .qz-app {
   position: relative;
   width: 100vw;
-  height: 100dvh; /* modern mobile-friendly */
-  /* Fallback if older browser: */
-  min-height: 100vh;
+  height: 100dvh; /* mobile-safe vh */
+  min-height: 100vh; /* fallback */
   overflow: hidden;
   background: #ffffff;
 }
 
-/* Canvas should never sit above overlays */
+/* Canvas */
 .qz-app > canvas {
   position: absolute;
   inset: 0;
@@ -38,12 +36,12 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ===== Controls (top-left) ===== */
+/* ===== Controls ===== */
 .qz-controls {
   position: fixed;
   top: 12px;
   left: 12px;
-  z-index: 9999; /* always above canvas & intro */
+  z-index: 9999;
   display: flex;
   gap: 8px;
   align-items: center;
@@ -51,16 +49,16 @@ body {
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: saturate(1.2) blur(4px);
   -webkit-backdrop-filter: saturate(1.2) blur(4px);
-  border: 1px solid #e5e7eb; /* gray-200 */
+  border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
-/* Buttons (works even without Tailwind) */
+/* Buttons */
 .qz-btn {
   appearance: none;
-  border: 1px solid #d1d5db; /* gray-300 */
+  border: 1px solid #d1d5db;
   background: #fff;
   color: #111827;
   padding: 8px 16px;
@@ -70,7 +68,7 @@ body {
   cursor: pointer;
   transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
 }
-.qz-btn:hover { background: #f9fafb; }      /* gray-50 */
+.qz-btn:hover { background: #f9fafb; }
 .qz-btn:active { transform: translateY(1px); }
 
 .qz-btn--primary {
@@ -79,23 +77,23 @@ body {
   border-color: #111827;
 }
 .qz-btn--primary:hover {
-  background: #1f2937; /* gray-800 */
+  background: #1f2937;
   border-color: #1f2937;
 }
 
-/* ===== Intro card (center) ===== */
+/* ===== Intro card ===== */
 .qz-intro {
   position: fixed;
   left: 50%;
   top: 30%;
   transform: translate(-50%, -50%);
   z-index: 9998;
-  pointer-events: none; /* clicks go through to canvas until draw begins */
+  pointer-events: none;
 
   max-width: 680px;
   width: calc(100vw - 32px);
   background: rgba(255, 255, 255, 0.88);
-  border: 1px solid #e5e7eb; /* gray-200 */
+  border: 1px solid #e5e7eb;
   border-radius: 16px;
   padding: 24px;
   text-align: center;
@@ -106,16 +104,16 @@ body {
   margin: 0 0 8px;
   font-size: clamp(24px, 5vw, 36px);
   font-weight: 800;
-  color: #1f2937; /* gray-800 */
+  color: #1f2937;
 }
 
 .qz-intro p {
   margin: 6px 0;
-  color: #374151; /* gray-700 */
+  color: #374151;
   font-size: clamp(14px, 3.2vw, 18px);
 }
 
-/* ===== “Try again” CTA (bottom center) ===== */
+/* ===== Try again CTA ===== */
 .qz-cta {
   position: fixed;
   left: 50%;
@@ -123,27 +121,20 @@ body {
   transform: translateX(-50%);
   z-index: 9998;
 }
-
 .qz-cta .qz-btn--primary {
   padding: 12px 20px;
   border-radius: 12px;
   font-size: 15px;
 }
 
-/* ===== Utility (if Tailwind isn’t loaded) ===== */
-.text-center { text-align: center; }
-.pointer-events-none { pointer-events: none; }
-
-/* ===== Mobile polish ===== */
-@media (hover: none) and (pointer: coarse) {
+/* Mobile polish */
+@media (hover: none) and (pointer: coarse)) {
   .qz-btn { padding: 12px 16px; font-size: 16px; }
   .qz-controls { gap: 10px; padding: 10px; }
 }
 
-/* Prevent long-press menus interfering with drawing on iOS Safari */
-.qz-app, .qz-app * {
-  -webkit-touch-callout: none;
-}
+/* iOS long-press */
+.qz-app, .qz-app * { -webkit-touch-callout: none; }
 
-/* Optional: ensure any overflowed focus ring doesn’t shift layout */
+/* Focus ring */
 .qz-btn:focus { outline: 2px solid #2563eb33; outline-offset: 2px; }

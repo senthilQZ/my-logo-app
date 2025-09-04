@@ -17,7 +17,7 @@ export default function App() {
   const [bestScore, setBestScore] = useState(0);
   const [attempts, setAttempts] = useState(0);
 
-  // tiny throttle for smoother lines
+  // throttle for smoother lines
   const lastAddRef = useRef<number>(0);
   const ADD_POINT_EVERY_MS = 10;
 
@@ -111,18 +111,18 @@ export default function App() {
     if (smoothnessScore > 0.8 && completenessScore > 0.7) totalScore += 5;
     totalScore = Math.max(0, Math.min(100, totalScore));
 
-    let message = "Keep trying! Focus on the circular ring! 🎨";
-    if (totalScore >= 95) message = "Perfect! Master-level logo! 🏆";
-    else if (totalScore >= 85) message = "Excellent! Nearly perfect logo! 🎯";
-    else if (totalScore >= 70) message = "Great work! Very recognizable! 👏";
-    else if (totalScore >= 55) message = "Good job! Nice logo elements! 💪";
-    else if (totalScore >= 40) message = "Not bad! Keep practicing! 🖊️";
-    else if (totalScore >= 25) message = "Getting there! Try the ring + arrow! 🔄";
+    let message = 'Keep trying! Focus on the circular ring! 🎨';
+    if (totalScore >= 95) message = 'Perfect! Master-level logo! 🏆';
+    else if (totalScore >= 85) message = 'Excellent! Nearly perfect logo! 🎯';
+    else if (totalScore >= 70) message = 'Great work! Very recognizable! 👏';
+    else if (totalScore >= 55) message = 'Good job! Nice logo elements! 💪';
+    else if (totalScore >= 40) message = 'Not bad! Keep practicing! 🖊️';
+    else if (totalScore >= 25) message = 'Getting there! Try the ring + arrow! 🔄';
 
     return { score: totalScore, message };
   };
 
-  // ---------- canvas sizing (mobile-safe) ----------
+  // ---------- canvas sizing (mobile-safe, no skew) ----------
   useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -135,15 +135,15 @@ export default function App() {
         const { width, height } = entry.contentRect;
         const dpr = window.devicePixelRatio || 1;
 
-        // CSS size
+        // Match CSS size
         canvas.style.width = `${width}px`;
         canvas.style.height = `${height}px`;
 
-        // Buffer size
+        // Set buffer size
         canvas.width = Math.max(1, Math.floor(width * dpr));
         canvas.height = Math.max(1, Math.floor(height * dpr));
 
-        // Reset transform, then scale—prevents skew/compounding
+        // Reset then scale — prevents compounding/skew
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.scale(dpr, dpr);
 
@@ -192,7 +192,7 @@ export default function App() {
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, width, height);
 
-    // grid + guide
+    // grid + guide image
     if (showGrid) {
       ctx.strokeStyle = '#f0f0f0';
       ctx.lineWidth = 1;
@@ -223,10 +223,10 @@ export default function App() {
       }
     }
 
-    // user lines
+    // user stroke
     if (points.length > 1) {
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 4;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
       ctx.beginPath();
@@ -295,6 +295,7 @@ export default function App() {
     setIsDrawing(false);
   };
 
+  // ---------- render ----------
   return (
     <div ref={containerRef} className="qz-app">
       <canvas
