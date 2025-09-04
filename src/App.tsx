@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-// ⬇️ Update this path to where you put the SVG in your project
+// Update this path to the exact location/name of your file in src/
 import QualiZealLogo from './QualiZeal Monogram Colored.svg';
 
 interface Point { x: number; y: number; }
@@ -13,20 +13,19 @@ export default function DrawPerfectLogo() {
   const [showGrid, setShowGrid] = useState(true);
   const [bestScore, setBestScore] = useState(0);
   const [attempts, setAttempts] = useState(0);
-  const logoImgRef = useRef<HTMLImageElement | null>(null); // ⬅️ cache the SVG image
+  const logoImgRef = useRef<HTMLImageElement | null>(null);
 
-  // ----- evaluation (unchanged) -----
-  const evaluateLogo = (points: Point[]): EvaluationResult => {
-    if (points.length < 15) return { score: 0, message: "Draw the complete logo!" };
+  const evaluateLogo = (pts: Point[]): EvaluationResult => {
+    if (pts.length < 15) return { score: 0, message: "Draw the complete logo!" };
     const canvas = canvasRef.current;
     if (!canvas) return { score: 0, message: "Error evaluating drawing" };
     const displayWidth = canvas.width / (window.devicePixelRatio || 1);
     const displayHeight = canvas.height / (window.devicePixelRatio || 1);
 
-    let minX = Math.min(...points.map(p => p.x));
-    let maxX = Math.max(...points.map(p => p.x));
-    let minY = Math.min(...points.map(p => p.y));
-    let maxY = Math.max(...points.map(p => p.y));
+    let minX = Math.min(...pts.map(p => p.x));
+    let maxX = Math.max(...pts.map(p => p.x));
+    let minY = Math.min(...pts.map(p => p.y));
+    let maxY = Math.max(...pts.map(p => p.y));
     const drawingWidth = maxX - minX;
     const drawingHeight = maxY - minY;
     const centerX = (minX + maxX) / 2;
@@ -37,36 +36,36 @@ export default function DrawPerfectLogo() {
     const expectedRadius = Math.min(drawingWidth, drawingHeight) / 3;
     let circularPoints = 0;
     let totalRadiusVariance = 0;
-    for (const point of points) {
-      const distFromCenter = Math.hypot(point.x - centerX, point.y - centerY);
-      if (distFromCenter >= expectedRadius * 0.6 && distFromCenter <= expectedRadius * 1.4) {
+    for (const point of pts) {
+      const dist = Math.hypot(point.x - centerX, point.y - centerY);
+      if (dist >= expectedRadius * 0.6 && dist <= expectedRadius * 1.4) {
         circularPoints++;
-        totalRadiusVariance += Math.abs(distFromCenter - expectedRadius);
+        totalRadiusVariance += Math.abs(dist - expectedRadius);
       }
     }
     if (circularPoints > 0) {
       const avgVariance = totalRadiusVariance / circularPoints;
-      const consistencyFactor = Math.max(0, 1 - (avgVariance / expectedRadius));
-      circularityScore = (circularPoints / points.length) * consistencyFactor;
+      const consistency = Math.max(0, 1 - (avgVariance / expectedRadius));
+      circularityScore = (circularPoints / pts.length) * consistency;
     }
 
     // arrow/lines
     let arrowScore = 0;
     let straightSegments = 0;
     let diagonalSegments = 0;
-    for (let i = 3; i < points.length - 3; i++) {
-      const p1 = points[i - 3], p2 = points[i], p3 = points[i + 3];
+    for (let i = 3; i < pts.length - 3; i++) {
+      const p1 = pts[i - 3], p2 = pts[i], p3 = pts[i + 3];
       const dist1 = Math.hypot(p2.x - p1.x, p2.y - p1.y);
       const dist2 = Math.hypot(p3.x - p2.x, p3.y - p2.y);
-      const directDist = Math.hypot(p3.x - p1.x, p3.y - p1.y);
-      const straightness = directDist / (dist1 + dist2);
+      const direct = Math.hypot(p3.x - p1.x, p3.y - p1.y);
+      const straightness = direct / (dist1 + dist2);
       if (straightness > 0.95) {
         straightSegments++;
         const angle = Math.atan2(p3.y - p1.y, p3.x - p1.x);
         if (Math.abs(angle) > Math.PI / 6 && Math.abs(angle) < Math.PI * 5 / 6) diagonalSegments++;
       }
     }
-    arrowScore = Math.min(1, (straightSegments / (points.length * 0.15)) * (1 + diagonalSegments / 10));
+    arrowScore = Math.min(1, (straightSegments / (pts.length * 0.15)) * (1 + diagonalSegments / 10));
 
     // completeness
     let completenessScore = 0;
@@ -76,7 +75,7 @@ export default function DrawPerfectLogo() {
       completenessScore = Math.max(circularityScore, arrowScore) * 0.6;
     }
 
-    // size/proportion
+    // proportion
     const canvasArea = displayWidth * displayHeight;
     const drawingArea = drawingWidth * drawingHeight;
     const sizeRatio = drawingArea / canvasArea;
@@ -88,17 +87,16 @@ export default function DrawPerfectLogo() {
 
     // smoothness
     let smoothnessScore = 0;
-    if (points.length > 20) {
+    if (pts.length > 20) {
       let totalDeviation = 0;
-      for (let i = 1; i < points.length - 1; i++) {
-        const p1 = points[i - 1], p2 = points[i], p3 = points[i + 1];
-        const a1 = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-        const a2 = Math.atan2(p3.y - p2.y, p3.x - p2.x);
+      for (let i = 1; i < pts.length - 1; i++) {
+        const a1 = Math.atan2(pts[i].y - pts[i - 1].y, pts[i].x - pts[i - 1].x);
+        const a2 = Math.atan2(pts[i + 1].y - pts[i].y, pts[i + 1].x - pts[i].x);
         let diff = Math.abs(a2 - a1);
         if (diff > Math.PI) diff = 2 * Math.PI - diff;
         totalDeviation += diff;
       }
-      const avgDeviation = totalDeviation / (points.length - 2);
+      const avgDeviation = totalDeviation / (pts.length - 2);
       smoothnessScore = Math.max(0, 1 - avgDeviation);
     }
 
@@ -125,7 +123,7 @@ export default function DrawPerfectLogo() {
     return { score: totalScore, message };
   };
 
-  // ----- setup & resize (fixed transform) -----
+  // setup & resize (reset transform to avoid skew)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -138,7 +136,6 @@ export default function DrawPerfectLogo() {
       canvas.height = window.innerHeight * scale;
       canvas.style.width = `${window.innerWidth}px`;
       canvas.style.height = `${window.innerHeight}px`;
-      // ✅ reset transform instead of compounding scale()
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
       drawCanvas();
     };
@@ -148,10 +145,10 @@ export default function DrawPerfectLogo() {
     return () => window.removeEventListener('resize', applySize);
   }, []);
 
-  // ----- preload SVG once -----
+  // preload SVG
   useEffect(() => {
     const img = new Image();
-    img.src = QualiZealLogo; // bundlers resolve to a URL
+    img.src = QualiZealLogo;
     img.onload = () => {
       logoImgRef.current = img;
       drawCanvas();
@@ -177,7 +174,7 @@ export default function DrawPerfectLogo() {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, displayWidth, displayHeight);
 
-    // grid
+    // grid + guide
     if (showGrid) {
       ctx.strokeStyle = '#f0f0f0';
       ctx.lineWidth = 1;
@@ -189,24 +186,14 @@ export default function DrawPerfectLogo() {
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(displayWidth, y); ctx.stroke();
       }
 
-      // ✅ draw actual QualiZeal SVG as the non-skewed guide
       if (points.length === 0 && logoImgRef.current) {
         const img = logoImgRef.current;
-        // target size = 12% of min dimension, preserve aspect ratio
-        const target = Math.min(displayWidth, displayHeight) * 0.22; // a bit larger so details are clear
-        const aspect = img.width / img.height || 1;
+        const target = Math.min(displayWidth, displayHeight) * 0.22;
+        const aspect = (img.width || 1) / (img.height || 1);
         let drawW = target, drawH = target;
-        if (aspect >= 1) {
-          drawW = target;
-          drawH = target / aspect;
-        } else {
-          drawH = target;
-          drawW = target * aspect;
-        }
-        const cx = displayWidth / 2;
-        const cy = displayHeight / 2;
+        if (aspect >= 1) { drawH = target / aspect; } else { drawW = target * aspect; }
+        const cx = displayWidth / 2, cy = displayHeight / 2;
 
-        // drop shadow to make it pop on grid
         ctx.save();
         ctx.globalAlpha = 0.95;
         ctx.shadowColor = 'rgba(0,0,0,0.12)';
@@ -214,7 +201,6 @@ export default function DrawPerfectLogo() {
         ctx.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
         ctx.restore();
 
-        // caption
         ctx.fillStyle = '#888';
         ctx.font = '16px system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'center';
@@ -279,10 +265,10 @@ export default function DrawPerfectLogo() {
 
   const handleMouseDown = (e: React.MouseEvent) => { e.preventDefault(); startDrawing(getMousePos(e)); };
   const handleMouseMove = (e: React.MouseEvent) => { e.preventDefault(); draw(getMousePos(e)); };
-  const handleMouseUp =   (e: React.MouseEvent) => { e.preventDefault(); stopDrawing(); };
-  const handleTouchStart = (e: React.TouchEvent) => { e.preventDefault(); startDrawing(getTouchPos(e)); };
-  const handleTouchMove  = (e: React.TouchEvent) => { e.preventDefault(); draw(getTouchPos(e)); };
-  const handleTouchEnd   = (e: React.TouchEvent) => { e.preventDefault(); stopDrawing(); };
+  const handleMouseUp   = (e: React.MouseEvent) => { e.preventDefault(); stopDrawing(); };
+  const handleTouchStart= (e: React.TouchEvent) => { e.preventDefault(); startDrawing(getTouchPos(e)); };
+  const handleTouchMove = (e: React.TouchEvent) => { e.preventDefault(); draw(getTouchPos(e)); };
+  const handleTouchEnd  = (e: React.TouchEvent) => { e.preventDefault(); stopDrawing(); };
 
   const clearCanvas = () => { setPoints([]); setResult(null); };
 
@@ -302,11 +288,39 @@ export default function DrawPerfectLogo() {
       />
 
       <div className="absolute top-4 left-4 flex gap-2 z-10">
-        <button onClick={clearCanvas} className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors">Clear</button>
-        <button onClick={() => setShowGrid(!showGrid)} className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
+        <button
+          onClick={clearCanvas}
+          className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+        >
+          Clear
+        </button>
+        <button
+          onClick={() => setShowGrid(!showGrid)}
+          className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+        >
           {showGrid ? 'Hide guide' : 'Show guide'}
         </button>
       </div>
 
       {points.length === 0 && !result && (
-        <div className="absolute top-1/3 left-1/2 -
+        <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-10">
+          <h1 className="text-4xl font-bold mb-4 text-gray-800">Draw the perfect logo</h1>
+          <p className="text-gray-600 text-lg">Click and drag to draw your logo</p>
+          <p className="text-gray-500 text-sm mt-2">Tip: Use the grid and aim for smooth strokes</p>
+          <p className="text-gray-500 text-sm mt-1">Best score: {bestScore} | Attempts: {attempts}</p>
+        </div>
+      )}
+
+      {result && (
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
+          <button
+            onClick={clearCanvas}
+            className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
