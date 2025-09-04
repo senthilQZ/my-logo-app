@@ -112,7 +112,7 @@ export default function DrawPerfectLogo() {
     totalScore = Math.max(0, Math.min(100, totalScore));
 
     let message;
-    if (totalScore >= 95) message = "Perfect! Master-level logo! 🏆";
+    if (totalScore >= 95) message = "Perfect! Master-level logo!🏆";
     else if (totalScore >= 85) message = "Excellent! Nearly perfect logo! 🎯";
     else if (totalScore >= 70) message = "Great work! Very recognizable! 👏";
     else if (totalScore >= 55) message = "Good job! Nice logo elements! 💪";
@@ -205,7 +205,7 @@ export default function DrawPerfectLogo() {
         ctx.font = '16px system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('Draw this logo', cx, cy - target * 0.75);
+        ctx.fillText('Draw QualiZeal's logo', cx, cy - target * 0.75);
       }
     }
 
@@ -287,29 +287,45 @@ export default function DrawPerfectLogo() {
         style={{ zIndex: 1 }}
       />
 
-      <div className="absolute top-4 left-4 flex gap-2 z-10">
-        <button
-          onClick={clearCanvas}
-          className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
-        >
-          Clear
-        </button>
-        <button
-          onClick={() => setShowGrid(!showGrid)}
-          className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
-        >
-          {showGrid ? 'Hide guide' : 'Show guide'}
-        </button>
-      </div>
+      <div className="absolute top-4 left-4 z-10">
+  <div className="flex gap-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl shadow-sm p-2">
+    <button
+      onClick={clearCanvas}
+      className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+      title="Clear your current drawing but keep scores"
+    >
+      Clear
+    </button>
 
-      {points.length === 0 && !result && (
-        <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-10">
-          <h1 className="text-4xl font-bold mb-4 text-gray-800">Draw the perfect logo</h1>
-          <p className="text-gray-600 text-lg">Click and drag to draw your logo</p>
-          <p className="text-gray-500 text-sm mt-2">Tip: Use the grid and aim for smooth strokes</p>
-          <p className="text-gray-500 text-sm mt-1">Best score: {bestScore} | Attempts: {attempts}</p>
-        </div>
-      )}
+    <button
+      onClick={resetAll}
+      className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+      title="Reset everything (scores & attempts)"
+    >
+      Reset
+    </button>
+
+    <button
+      onClick={() => setShowGrid(!showGrid)}
+      className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+      title="Toggle grid and sample logo"
+    >
+      {showGrid ? 'Hide guide' : 'Show guide'}
+    </button>
+  </div>
+</div>
+
+
+{!isDrawing && points.length === 0 && !result && (
+  <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
+    <div className="max-w-xl mx-auto text-center bg-white/85 backdrop-blur-sm border border-gray-200 rounded-2xl shadow p-6">
+      <h1 className="text-4xl font-bold mb-3 text-gray-800">Draw the perfect logo</h1>
+      <p className="text-gray-700 text-lg">QualiZealots!!, Please Click and drag to draw the logo</p>
+      <p className="text-gray-600 text-sm mt-2">Tip: Use the grid and aim for smooth strokes</p>
+      <p className="text-gray-500 text-sm mt-1">Best score: {bestScore} | Attempts: {attempts}</p>
+    </div>
+  </div>
+)}
 
       {result && (
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
