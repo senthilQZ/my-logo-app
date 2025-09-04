@@ -280,7 +280,7 @@ export default function App() {
 
     if (points.length > 1) {
       ctx.strokeStyle = '#111827';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 2;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
       ctx.beginPath();
