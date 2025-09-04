@@ -261,7 +261,7 @@ export default function App() {
         const aspect = (img.width || 1) / (img.height || 1);
         let w = target, h = target;
         if (aspect >= 1) { h = target / aspect; } else { w = target * aspect; }
-        const cx = width / 2, cy = height / 2;
+        const cx = width / 2, cy = height / 2 +50;
 
         ctx.save();
         ctx.globalAlpha = 0.95;
