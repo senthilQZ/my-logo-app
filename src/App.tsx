@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 // Update this path to the exact location/name of your file in src/
 import QualiZealLogo from './QualiZeal Monogram Colored.svg';
-
+import './App.css';
 interface Point { x: number; y: number; }
 interface EvaluationResult { score: number; message: string; }
 
@@ -374,6 +374,37 @@ export default function DrawPerfectLogo() {
           </div>
         </div>
       )}
+return (
+  <div ref={containerRef} className="qz-app">
+    <canvas ref={canvasRef} />
+
+    {/* Controls */}
+    <div className="qz-controls">
+      <button className="qz-btn" onClick={clearCanvas}>Clear</button>
+      <button className="qz-btn qz-btn--primary" onClick={resetAll}>Reset</button>
+      <button className="qz-btn" onClick={() => setShowGrid(s => !s)}>
+        {showGrid ? 'Hide guide' : 'Show guide'}
+      </button>
+    </div>
+
+    {/* Intro card */}
+    {points.length === 0 && !result && (
+      <div className="qz-intro">
+        <h1>Draw the perfect logo</h1>
+        <p>QualiZealots!! Please click and drag to draw the logo</p>
+        <p>Tip: Use the grid and aim for smooth strokes</p>
+        <p>Best score: {bestScore} | Attempts: {attempts}</p>
+      </div>
+    )}
+
+    {/* Try again CTA */}
+    {result && (
+      <div className="qz-cta">
+        <button className="qz-btn qz-btn--primary" onClick={clearCanvas}>Try again</button>
+      </div>
+    )}
+  </div>
+);
 
       {/* Try again CTA */}
       {result && (
